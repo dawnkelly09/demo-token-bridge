@@ -1,14 +1,10 @@
 import {
   TokenId,
   Wormhole,
-  isTokenId,
   type Signer as WormholeSdkSigner,
 } from '@wormhole-foundation/sdk';
 import type { ChainContext } from '@wormhole-foundation/sdk';
-import type { Signer } from '@wormhole-foundation/sdk-connect';
-import evm from '@wormhole-foundation/sdk/evm';
 import { EvmPlatform } from '@wormhole-foundation/sdk-evm';
-import { getEvmSigner } from '@wormhole-foundation/sdk-evm';
 import { ethers } from 'ethers';
 
 /**
