@@ -10,17 +10,20 @@ import evm from '@wormhole-foundation/sdk/evm';
 import { EvmPlatform } from '@wormhole-foundation/sdk-evm';
 import { getEvmSigner } from '@wormhole-foundation/sdk-evm';
 import { ethers } from 'ethers';
-import { config } from 'dotenv';
-config();
 
-/***----- Environment Variables -----***/
-const ARBITRUM_PRIVATE_KEY = process.env.ARBITRUM_PRIVATE_KEY!;
-const ARBITRUM_RPC_URL = process.env.ARBITRUM_RPC_URL || 'https://sepolia-rollup.arbitrum.io/rpc';
-const CELO_PRIVATE_KEY = process.env.CELO_PRIVATE_KEY!;
-const CELO_RPC_URL = process.env.CELO_RPC_URL || 'https://alfajores-forno.celo-testnet.org';
+/**
+ * Returns a signer for the given chain using locally scoped credentials.
+ * The required values (ARBITRUM_PRIVATE_KEY, CELO_PRIVATE_KEY) must
+ * be loaded securely beforehand, for example via a keystore, secrets
+ * manager, or environment variables (not recommended).
+ */
 
-/***----- Configure Signers for EVM Chains -----***/
+const ARBITRUM_PRIVATE_KEY = ARBITRUM_PRIVATE_KEY!;
+const ARBITRUM_RPC_URL = ARBITRUM_RPC_URL! || 'https://sepolia-rollup.arbitrum.io/rpc';
+const CELO_PRIVATE_KEY = CELO_PRIVATE_KEY!;
+const CELO_RPC_URL = CELO_RPC_URL! || 'https://alfajores-forno.celo-testnet.org';
 
+// Configure signers for EVM platform chains
 export function getArbitrumSigner(): ethers.Wallet {
   const provider = new ethers.JsonRpcProvider(ARBITRUM_RPC_URL!);
   return new ethers.Wallet(ARBITRUM_PRIVATE_KEY!, provider);
@@ -31,7 +34,7 @@ export function getCeloSigner(): ethers.Wallet {
   return new ethers.Wallet(CELO_PRIVATE_KEY!, provider);
 }
 
-/***----- Token Decimal Helper -----***/
+// Token decimal helper
 
 export async function getTokenDecimals<
   N extends 'Mainnet' | 'Testnet' | 'Devnet'
