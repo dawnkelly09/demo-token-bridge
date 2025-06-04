@@ -30,27 +30,6 @@ export function getCeloSigner(): ethers.Wallet {
   return new ethers.Wallet(CELO_PRIVATE_KEY!, provider);
 }
 
-// Token decimal helper
-
-export async function getTokenDecimals<
-  N extends 'Mainnet' | 'Testnet' | 'Devnet'
->(
-  wh: Wormhole<N>,
-  token: TokenId,
-  sendChain: ChainContext<N, any>
-): Promise<number> {
-  // If token is native, use the chain's configured nativeTokenDecimals
-  if (
-    token.address.toString() ===
-    EvmPlatform.nativeTokenId(sendChain.network, sendChain.chain).address.toString()
-  ) {
-    return sendChain.config.nativeTokenDecimals;
-  }
-
-  // Otherwise try to read from token contract
-  return Number(await wh.getDecimals(token.chain, token.address));
-}
-
 
 
 
