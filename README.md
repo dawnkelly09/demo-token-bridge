@@ -38,8 +38,6 @@ Follow these steps to get started:
 
     If you use a `.env` file during development (not recommended), add it to your `.gitignore` to exclude it from version control. Never commit private keys or mnemonics to your repository.
 
-4. 
-
 ## Project Structure
 
 - `src/transfer.ts`: Main entry point for transferring tokens. Includes logic to check if the token is registered on the destination chain.
