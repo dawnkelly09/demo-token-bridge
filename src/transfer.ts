@@ -5,8 +5,6 @@ import {
   serialize
 } from '@wormhole-foundation/sdk';
 import evm from '@wormhole-foundation/sdk/evm';
-import {EvmAddress} from '@wormhole-foundation/sdk-evm'
-import type { SignAndSendSigner } from '@wormhole-foundation/sdk-connect';
 import { getArbitrumSigner, getCeloSigner } from './helpers';
 import { ethers } from 'ethers';
 import { writeFile } from "fs/promises";
