@@ -6,22 +6,19 @@ import { getArbitrumSigner, getCeloSigner } from './helpers';
 async function attestToken() {
   // Initialize the Wormhole SDK, get chain contexts
   const wh = await wormhole('Testnet', [evm]);
-  const sourceChain = wh.getChain('ArbitrumSepolia');
-  const destinationChain = wh.getChain('Celo');
+  const sourceChainCtx = wh.getChain('ArbitrumSepolia');
+  const destinationChainCtx = wh.getChain('Celo');
   // Get signers for source and destination chains
   const sourceSigner = await getArbitrumSigner();
   const destinationSigner = await getCeloSigner();
-
-  // Define the token to attest for
-  // registeration on the destination chain
+  // Define the token to attest for registeration
+  // on the destination chain (token you want to transfer)
   const tokenToAttest = 'INSERT_ERC20_ADDRESS';
-  const token = toNative(sourceChain.chain, tokenToAttest);
+  const token = toNative(sourceChainCtx.chain, tokenToAttest);
   console.log(`🔍 Token to attest: ${token.toString()}`);
 
-  // Create attestation on the source chain
-  console.log(`\n📝 Creating attestation on ${sourceChain.chain}...`);
   // Get the Token Bridge protocol for source chain
-  const sourceTokenBridge = await sourceChain.getTokenBridge();
+  const sourceTokenBridge = await sourceChainCtx.getTokenBridge();
   // Create attestation transactions
   const createAttestationTxs = sourceTokenBridge.createAttestation(token);
   // Prepare to collect transaction hashes
@@ -36,11 +33,8 @@ async function attestToken() {
   // Log the transaction ID of the attestation
   const sourceTxId = sourceTxids[0];
   console.log(`✅ Attestation tx sent: ${sourceTxId}`);
-
-  // Fetch the attestation VAA
-  console.log(`\n🔄 Fetching VAA for tx: ${sourceTxId}`);
   // Parse the transaction to get messages
-  const messages = await sourceChain.parseTransaction(sourceTxId);
+  const messages = await sourceChainCtx.parseTransaction(sourceTxId);
   console.log('📦 Parsed messages:', messages);
   // Set a timeout for fetching the VAA, this can take several minutes
   // depending on the source chain network and finality
@@ -51,10 +45,10 @@ async function attestToken() {
 
   // Submit the attestation on the destination chain
   console.log(
-    `\n📨 Submitting attestation VAA to ${destinationChain.chain}...`,
+    `\n📨 Submitting attestation VAA to ${destinationChainCtx.chain}...`,
   );
   // Get the Token Bridge protocol for destination chain
-  const destTokenBridge = await destinationChain.getTokenBridge();
+  const destTokenBridge = await destinationChainCtx.getTokenBridge();
   // Submit the attestation VAA
   const submitTxs = destTokenBridge.submitAttestation(vaa);
   // Prepare to collect transaction hashes for the destination chain
@@ -68,7 +62,11 @@ async function attestToken() {
   }
 
   console.log(`✅ Attestation VAA submitted: ${destTxids[0]}`);
-  console.log('\n🎉 Token attestation complete!');
+  console.log(
+    `🎉 Token attestation complete! You are now ready to transfer ${token.toString()} to ${
+      destinationChainCtx.chain
+    }`,
+  );
 }
 
 attestToken().catch((err) => {

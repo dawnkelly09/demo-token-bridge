@@ -37,7 +37,6 @@ async function redeemOnCelo() {
     await sent.wait();
     txHashes.push(sent.hash);
   }
-
   console.log('✅ Redemption complete. Celo txid(s):', txHashes);
 }
 
