@@ -14,8 +14,10 @@ import { ethers } from 'ethers';
  * manager, or environment variables (not recommended).
  */
 
-const ARBITRUM_RPC_URL = ARBITRUM_RPC_URL! || 'https://sepolia-rollup.arbitrum.io/rpc';
-const CELO_RPC_URL = CELO_RPC_URL! || 'https://alfajores-forno.celo-testnet.org';
+const ARBITRUM_RPC_URL =
+  ARBITRUM_RPC_URL! || 'https://sepolia-rollup.arbitrum.io/rpc';
+const CELO_RPC_URL =
+  CELO_RPC_URL! || 'https://alfajores-forno.celo-testnet.org';
 
 // Configure signers for EVM platform chains
 export function getArbitrumSigner(): ethers.Wallet {
@@ -27,7 +29,3 @@ export function getCeloSigner(): ethers.Wallet {
   const provider = new ethers.JsonRpcProvider(CELO_RPC_URL!);
   return new ethers.Wallet(CELO_PRIVATE_KEY!, provider);
 }
-
-
-
-

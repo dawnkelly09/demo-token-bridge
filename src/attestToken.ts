@@ -8,13 +8,13 @@ async function attestToken() {
   const wh = await wormhole('Testnet', [evm]);
   const sourceChain = wh.getChain('ArbitrumSepolia');
   const destinationChain = wh.getChain('Celo');
-// Get signers for source and destination chains
+  // Get signers for source and destination chains
   const sourceSigner = await getArbitrumSigner();
   const destinationSigner = await getCeloSigner();
 
-  // Define the token to attest for 
+  // Define the token to attest for
   // registeration on the destination chain
-  const tokenToAttest = 'INSERT_ERC20_ADDRESS'; 
+  const tokenToAttest = 'INSERT_ERC20_ADDRESS';
   const token = toNative(sourceChain.chain, tokenToAttest);
   console.log(`🔍 Token to attest: ${token.toString()}`);
 
@@ -24,16 +24,16 @@ async function attestToken() {
   const sourceTokenBridge = await sourceChain.getTokenBridge();
   // Create attestation transactions
   const createAttestationTxs = sourceTokenBridge.createAttestation(token);
-// Prepare to collect transaction hashes
+  // Prepare to collect transaction hashes
   const sourceTxids: string[] = [];
-// Iterate through the unsigned transactions, sign and send them
+  // Iterate through the unsigned transactions, sign and send them
   for await (const tx of createAttestationTxs) {
     const txRequest = tx.transaction as ethers.TransactionRequest;
     const sentTx = await sourceSigner.sendTransaction(txRequest);
     await sentTx.wait();
     sourceTxids.push(sentTx.hash);
   }
-// Log the transaction ID of the attestation
+  // Log the transaction ID of the attestation
   const sourceTxId = sourceTxids[0];
   console.log(`✅ Attestation tx sent: ${sourceTxId}`);
 
@@ -42,22 +42,24 @@ async function attestToken() {
   // Parse the transaction to get messages
   const messages = await sourceChain.parseTransaction(sourceTxId);
   console.log('📦 Parsed messages:', messages);
-// Set a timeout for fetching the VAA, this can take several minutes
-// depending on the source chain network and finality
+  // Set a timeout for fetching the VAA, this can take several minutes
+  // depending on the source chain network and finality
   const timeout = 25 * 60 * 1000;
   // Fetch the VAA for the attestation message
   const vaa = await wh.getVaa(messages[0]!, 'TokenBridge:AttestMeta', timeout);
   if (!vaa) throw new Error('❌ VAA not found before timeout.');
 
   // Submit the attestation on the destination chain
-  console.log(`\n📨 Submitting attestation VAA to ${destinationChain.chain}...`);
+  console.log(
+    `\n📨 Submitting attestation VAA to ${destinationChain.chain}...`,
+  );
   // Get the Token Bridge protocol for destination chain
   const destTokenBridge = await destinationChain.getTokenBridge();
   // Submit the attestation VAA
   const submitTxs = destTokenBridge.submitAttestation(vaa);
-// Prepare to collect transaction hashes for the destination chain
+  // Prepare to collect transaction hashes for the destination chain
   const destTxids: string[] = [];
-// Iterate through the unsigned transactions, sign and send them
+  // Iterate through the unsigned transactions, sign and send them
   for await (const tx of submitTxs) {
     const txRequest = tx.transaction as ethers.TransactionRequest;
     const sentTx = await destinationSigner.sendTransaction(txRequest);
