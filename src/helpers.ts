@@ -14,9 +14,7 @@ import { ethers } from 'ethers';
  * manager, or environment variables (not recommended).
  */
 
-const ARBITRUM_PRIVATE_KEY = ARBITRUM_PRIVATE_KEY!;
 const ARBITRUM_RPC_URL = ARBITRUM_RPC_URL! || 'https://sepolia-rollup.arbitrum.io/rpc';
-const CELO_PRIVATE_KEY = CELO_PRIVATE_KEY!;
 const CELO_RPC_URL = CELO_RPC_URL! || 'https://alfajores-forno.celo-testnet.org';
 
 // Configure signers for EVM platform chains
