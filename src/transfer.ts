@@ -5,112 +5,112 @@ import {
   serialize,
 } from '@wormhole-foundation/sdk';
 import evm from '@wormhole-foundation/sdk/evm';
-import { getArbitrumSigner, getCeloSigner } from './helpers';
+import { signSendWait } from '@wormhole-foundation/sdk-connect';
 import { ethers } from 'ethers';
 import { writeFile } from 'fs/promises';
+import { getMoonbeamSigner, getSepoliaSigner, getMoonbeamWallet } from './helpers';
 
 async function transferTokens() {
   // Initialize Wormhole SDK with EVM support
   const wh = await wormhole('Testnet', [evm]);
-  // Get source and destination chain contexts
-  const sourceChainCtx = wh.getChain('ArbitrumSepolia');
-  const destinationChainCtx = wh.getChain('Celo');
-  // Get signers for source and destination chains
-  const sourceSigner = await getArbitrumSigner();
-  const destinationSigner = await getCeloSigner();
-  const sourceAddress = await sourceSigner.getAddress();
 
-  // Define the ERC-20 token and amount to transfer
-  const ERC20_ADDRESS = 'INSERT_ERC20_ADDRESS'; // Replace with actual ERC-20 token address
-  const tokenAddress = toNative('ArbitrumSepolia', ERC20_ADDRESS);
-  const amount = '0.02';
-  // Handle decimals and convert amount to BigInt
-  // 18 is the standard decimal places for most ERC-20 tokens, change if needed
-  const amountBigInt = BigInt(ethers.parseUnits(amount, 18).toString());
-  // Get the Token Bridge protocol for source chain
-  const tokenBridge = await sourceChainCtx.getProtocol('TokenBridge');
+  // Get chain contexts
+  const sourceChainCtx = wh.getChain('Moonbeam');
+  const destinationChainCtx = wh.getChain('Sepolia');
 
-  // Check ERC-20 balance
+  // Get Wormhole SDK-compatible signers and addresses
+  const sourceSigner = await getMoonbeamSigner();
+  const destinationSigner = await getSepoliaSigner();
+  const sourceAddress = await sourceSigner.address();
+  const destinationAddress = await destinationSigner.address();
+
+  // Define token and transfer amount
+  const ERC20_ADDRESS = '0x39F2f26f247CcC223393396755bfde5ecaeb0648'; // Replace with actual token
+  const tokenAddress = toNative(sourceChainCtx.chain, ERC20_ADDRESS);
+  const amount = '0.01'; // Replace with desired amount
+
+  // Use raw wallet to interact with ERC-20 contract for metadata + approval
+  // for the source chain Token Bridge to spend the token to transfer
+  const rawWallet = getMoonbeamWallet();
   const tokenContract = new ethers.Contract(
     tokenAddress.toString(),
     [
+      'function decimals() view returns (uint8)',
       'function balanceOf(address) view returns (uint256)',
       'function approve(address spender, uint256 amount) returns (bool)',
     ],
-    sourceSigner,
+    rawWallet,
   );
+
+  // Get correct decimals from token metadata
+  const decimals = await tokenContract.decimals();
+  const amountBigInt = BigInt(ethers.parseUnits(amount, decimals).toString());
+
+  // Check balance
   const tokenBalance = await tokenContract.balanceOf(sourceAddress);
-  // 18 is the standard decimal places for most ERC-20 tokens, change if needed
-  const humanBalance = ethers.formatUnits(tokenBalance, 18);
+  const humanBalance = ethers.formatUnits(tokenBalance, decimals);
   console.log(`💰 ERC-20 balance: ${humanBalance}`);
 
   if (tokenBalance < amountBigInt) {
     throw new Error(
-      `🚫 Insufficient ERC-20 balance. Have ${humanBalance}, need ${amount}`,
+      `🚫 Insufficient balance. Have ${humanBalance}, need ${amount}`,
     );
   }
 
-  // Check if token is registered with the destination chain token bridge
+  // Check if token is already registered on destination chain
   const destinationTokenBridge = await destinationChainCtx.getTokenBridge();
   const isRegistered = await destinationTokenBridge.hasWrappedAsset({
     chain: sourceChainCtx.chain,
     address: tokenAddress.toUniversalAddress(),
   });
-  // If it isn't registered, prompt user to attest the token
+
   if (!isRegistered) {
     console.log(`🚫 Token not registered on ${destinationChainCtx.chain}.`);
     console.log(
-      `👉 Define token to attest and run: npx tsx src/attestToken.ts`,
+      `👉 Open src/attestToken.ts to register the token, then run this script again.`,
     );
     return;
-    // If it is registered, proceed with transfer
   } else {
-    console.log(
-      `✅ Token is registered on ${destinationChainCtx.chain}. Proceeding with transfer...`,
-    );
+    console.log(`✅ Token is registered. Proceeding with transfer...`);
   }
 
-  // Replace with the token bridge address for your source chain
-  const tokenBridgeAddress = 'INSERT_TOKEN_BRIDGE_ADDRESS'; // e.g., "0xYourTokenBridgeAddress"
-  // Approve the Token Bridge to spend your ERC-20 token
+  // Approve token bridge to spend the ERC-20 tokens
+  const tokenBridgeAddress = '0xbc976D4b9D57E57c3cA52e1Fd136C45FF7955A96'; // Replace with actual address
   const approveTx = await tokenContract.approve(
     tokenBridgeAddress,
     amountBigInt,
   );
   await approveTx.wait();
-  console.log(`✅ Approved Token Bridge to spend ${amount} ERC-20 token.`);
+  console.log(`✅ Approved ${amount} for transfer via Token Bridge.`);
 
-  // Build transfer transactions
-  const transferTxs = await tokenBridge.transfer(
-    toNative(sourceChainCtx.chain, sourceAddress),
-    {
-      chain: destinationChainCtx.chain,
-      address: toUniversal(
-        destinationChainCtx.chain,
-        await destinationSigner.address,
-      ),
-    },
-    tokenAddress,
-    amountBigInt,
+  // Create transfer transactions
+  const tokenBridge = await sourceChainCtx.getTokenBridge();
+  
+
+const transferTxs = await tokenBridge.transfer(
+  toNative(sourceChainCtx.chain, sourceAddress),
+  {
+    chain: destinationChainCtx.chain,
+    address: toUniversal(destinationChainCtx.chain, destinationAddress),
+  },
+  tokenAddress,
+  amountBigInt,
+);
+
+  // Sign and send transfer transactions
+  const txResults = await signSendWait(
+    sourceChainCtx,
+    transferTxs,
+    sourceSigner,
   );
-  // Gather transaction IDs for each transfer
-  const txids: string[] = [];
-  // Iterate through each unsigned transaction, sign and send it,
-  // and collect the transaction IDs
-  for await (const unsignedTx of transferTxs) {
-    const tx = unsignedTx.transaction as ethers.TransactionRequest;
-    const sentTx = await sourceSigner.sendTransaction(tx);
-    await sentTx.wait();
-    txids.push(sentTx.hash);
-  }
-
+  const txids = txResults.map((res) => res.txid);
   console.log('✅ Sent txs:', txids);
 
-  // Parse the transaction to get Wormhole messages
+  // Parse transfer messages
   const messages = await sourceChainCtx.parseTransaction(txids[0]!);
   console.log('📨 Parsed transfer messages:', messages);
-  // Set a timeout for VAA retrieval
-  // This can take several minutes depending on the network and finality
+
+  // Wait for VAA
   const timeout = 25 * 60 * 1000; // 25 minutes
   const vaaBytes = await wh.getVaa(
     messages[0]!,
@@ -118,18 +118,16 @@ async function transferTokens() {
     timeout,
   );
 
-  // Save VAA to file. You will need this to submit
-  // the transfer on the destination chain
   if (!vaaBytes) {
-    throw new Error(
-      '❌ No VAA was returned. Token transfer may not have finalized yet.',
-    );
+    throw new Error('❌ No VAA returned. Transfer may not have finalized.');
   }
+
+  // Save to file
   await writeFile('vaa.bin', Buffer.from(serialize(vaaBytes)));
   console.log('📝 VAA saved to vaa.bin');
 }
 
-transferTokens().catch((e) => {
-  console.error('❌ Error in transferViaAutoBridge:', e);
+transferTokens().catch((err) => {
+  console.error('❌ Error in transferTokens:', err);
   process.exit(1);
 });

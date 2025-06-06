@@ -1,75 +1,53 @@
 import { wormhole, toNative } from '@wormhole-foundation/sdk';
 import evm from '@wormhole-foundation/sdk/evm';
-import { ethers } from 'ethers';
-import { getArbitrumSigner, getCeloSigner } from './helpers';
+import { signSendWait } from '@wormhole-foundation/sdk-connect';
+import { getMoonbeamSigner, getSepoliaSigner } from './helpers';
 
 async function attestToken() {
-  // Initialize the Wormhole SDK, get chain contexts
+  // Setup Wormhole context
   const wh = await wormhole('Testnet', [evm]);
-  const sourceChainCtx = wh.getChain('ArbitrumSepolia');
-  const destinationChainCtx = wh.getChain('Celo');
-  // Get signers for source and destination chains
-  const sourceSigner = await getArbitrumSigner();
-  const destinationSigner = await getCeloSigner();
-  // Define the token to attest for registeration
-  // on the destination chain (token you want to transfer)
-  const tokenToAttest = 'INSERT_ERC20_ADDRESS';
-  const token = toNative(sourceChainCtx.chain, tokenToAttest);
-  console.log(`🔍 Token to attest: ${token.toString()}`);
+  const moonbeam = wh.getChain('Moonbeam');
+  const sepolia = wh.getChain('Sepolia');
 
-  // Get the Token Bridge protocol for source chain
-  const sourceTokenBridge = await sourceChainCtx.getTokenBridge();
-  // Create attestation transactions
-  const createAttestationTxs = sourceTokenBridge.createAttestation(token);
-  // Prepare to collect transaction hashes
-  const sourceTxids: string[] = [];
-  // Iterate through the unsigned transactions, sign and send them
-  for await (const tx of createAttestationTxs) {
-    const txRequest = tx.transaction as ethers.TransactionRequest;
-    const sentTx = await sourceSigner.sendTransaction(txRequest);
-    await sentTx.wait();
-    sourceTxids.push(sentTx.hash);
-  }
-  // Log the transaction ID of the attestation
-  const sourceTxId = sourceTxids[0];
-  console.log(`✅ Attestation tx sent: ${sourceTxId}`);
-  // Parse the transaction to get messages
-  const messages = await sourceChainCtx.parseTransaction(sourceTxId);
-  console.log('📦 Parsed messages:', messages);
-  // Set a timeout for fetching the VAA, this can take several minutes
-  // depending on the source chain network and finality
-  const timeout = 25 * 60 * 1000;
-  // Fetch the VAA for the attestation message
-  const vaa = await wh.getVaa(messages[0]!, 'TokenBridge:AttestMeta', timeout);
-  if (!vaa) throw new Error('❌ VAA not found before timeout.');
+  const sourceSigner = await getMoonbeamSigner();
+  const destSigner = await getSepoliaSigner();
 
-  // Submit the attestation on the destination chain
-  console.log(
-    `\n📨 Submitting attestation VAA to ${destinationChainCtx.chain}...`,
-  );
-  // Get the Token Bridge protocol for destination chain
-  const destTokenBridge = await destinationChainCtx.getTokenBridge();
-  // Submit the attestation VAA
-  const submitTxs = destTokenBridge.submitAttestation(vaa);
-  // Prepare to collect transaction hashes for the destination chain
-  const destTxids: string[] = [];
-  // Iterate through the unsigned transactions, sign and send them
-  for await (const tx of submitTxs) {
-    const txRequest = tx.transaction as ethers.TransactionRequest;
-    const sentTx = await destinationSigner.sendTransaction(txRequest);
-    await sentTx.wait();
-    destTxids.push(sentTx.hash);
-  }
+  // Token address on Moonbeam to attest
+  const tokenAddr = '0x39F2f26f247CcC223393396755bfde5ecaeb0648';
+  const token = toNative(moonbeam.chain, tokenAddr);
 
-  console.log(`✅ Attestation VAA submitted: ${destTxids[0]}`);
-  console.log(
-    `🎉 Token attestation complete! You are now ready to transfer ${token.toString()} to ${
-      destinationChainCtx.chain
-    }`,
-  );
+  console.log(`🔍 Attesting token: ${token.toString()} from ${moonbeam.chain} → ${sepolia.chain}`);
+
+  // Create attestation TXs
+  const srcBridge = await moonbeam.getTokenBridge();
+  const createAttestationTxs = srcBridge.createAttestation(token);
+
+  // Sign and send attestation on source
+  const txResults = await signSendWait(moonbeam, createAttestationTxs, sourceSigner);
+  const txid = txResults[0].txid;
+  console.log(`✅ Attestation submitted on source: ${txid}`);
+
+  // Parse messages from source TX
+  const messages = await moonbeam.parseTransaction(txid);
+  if (!messages.length) throw new Error('❌ No messages found in source tx.');
+
+  // Get the VAA from Wormhole
+  console.log('📡 Waiting for VAA...');
+  const vaa = await wh.getVaa(messages[0]!, 'TokenBridge:AttestMeta', 20 * 60 * 1000); // 20 min timeout
+  if (!vaa) throw new Error('❌ Timed out waiting for VAA.');
+
+  console.log('📨 Submitting attestation VAA to destination...');
+
+  // Submit attestation VAA on destination chain
+  const dstBridge = await sepolia.getTokenBridge();
+  const submitTxs = await sepolia.getTokenBridge().then((tb) => tb.submitAttestation(vaa));
+
+
+const result = await signSendWait(sepolia, submitTxs, destSigner);
+  console.log(`🎉 Attestation complete on ${sepolia.chain}! TX: ${result[0].txid}`);
 }
 
-attestToken().catch((err) => {
-  console.error('❌ Error in attestToken:', err);
+attestToken().catch((e) => {
+  console.error('🔥 Error during attestation:', e);
   process.exit(1);
 });

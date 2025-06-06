@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "transfer:token": "npx tsx src/transfer.ts",
+    "attest:token": "npx tsx src/attestToken.ts",
+    "redeem:token": "npx tsx src/redeem.ts"
   },
   "repository": {
     "type": "git",
@@ -21,6 +23,7 @@
   "dependencies": {
     "@wormhole-foundation/sdk": "^1.23.0",
     "@wormhole-foundation/sdk-evm": "^1.23.0",
+    "dotenv": "^16.5.0",
     "ethers": "^6.14.3"
   },
   "devDependencies": {

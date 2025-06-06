@@ -34,7 +34,7 @@ Follow these steps to get started:
     npm install
     ```
 
-3. **Set up secure access to your wallets**: this guide assumes you are loading your private keys from a secure keystore of your choice, such as a secrets manager or a CLI-based tool like [`cast wallet`](https://book.getfoundry.sh/reference/cast/cast-wallet). To use the demo as written, you'll need private keys with testnet funds for Arbitrum Sepolia and Celo Alfajores
+3. **Set up secure access to your wallets**: this guide assumes you are loading your private keys from a secure keystore of your choice, such as a secrets manager or a CLI-based tool like [`cast wallet`](https://book.getfoundry.sh/reference/cast/cast-wallet). To use the demo as written, you'll need private keys with testnet funds for Arbitrum Sepolia and Moonbase Alpha.
 
     If you use a `.env` file during development (not recommended), add it to your `.gitignore` to exclude it from version control. Never commit private keys or mnemonics to your repository.
 
