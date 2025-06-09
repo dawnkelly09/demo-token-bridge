@@ -1,19 +1,22 @@
 import { wormhole, toNative } from '@wormhole-foundation/sdk';
 import evm from '@wormhole-foundation/sdk/evm';
 import { ethers } from 'ethers';
-import { getArbitrumSigner, getCeloSigner } from './helpers';
+import { getMoonbeamSigner, getMoonbeamWallet, getSepoliaSigner, getSepoliaWallet } from './helpers';
 
 async function attestToken() {
   // Initialize the Wormhole SDK, get chain contexts
   const wh = await wormhole('Testnet', [evm]);
-  const sourceChainCtx = wh.getChain('ArbitrumSepolia');
-  const destinationChainCtx = wh.getChain('Celo');
+  const sourceChainCtx = wh.getChain('Moonbeam');
+  const destinationChainCtx = wh.getChain('Sepolia');
   // Get signers for source and destination chains
-  const sourceSigner = await getArbitrumSigner();
-  const destinationSigner = await getCeloSigner();
+  const sourceSigner = await getMoonbeamSigner();
+  const sourceWallet = getMoonbeamWallet();
+  const destinationSigner = await getSepoliaSigner();
+  const destinationWallet = getSepoliaWallet();
+
   // Define the token to attest for registeration
   // on the destination chain (token you want to transfer)
-  const tokenToAttest = 'INSERT_ERC20_ADDRESS';
+  const tokenToAttest = '0x39F2f26f247CcC223393396755bfde5ecaeb0648';
   const token = toNative(sourceChainCtx.chain, tokenToAttest);
   console.log(`🔍 Token to attest: ${token.toString()}`);
 
@@ -25,11 +28,11 @@ async function attestToken() {
   const sourceTxids: string[] = [];
   // Iterate through the unsigned transactions, sign and send them
   for await (const tx of createAttestationTxs) {
-    const txRequest = tx.transaction as ethers.TransactionRequest;
-    const sentTx = await sourceSigner.sendTransaction(txRequest);
-    await sentTx.wait();
-    sourceTxids.push(sentTx.hash);
-  }
+  const txRequest = tx.transaction as ethers.TransactionRequest;
+  const sentTx = await sourceWallet.sendTransaction(txRequest); // Use wallet, not SDK signer
+  await sentTx.wait();
+  sourceTxids.push(sentTx.hash);
+}
   // Log the transaction ID of the attestation
   const sourceTxId = sourceTxids[0];
   console.log(`✅ Attestation tx sent: ${sourceTxId}`);
@@ -56,7 +59,7 @@ async function attestToken() {
   // Iterate through the unsigned transactions, sign and send them
   for await (const tx of submitTxs) {
     const txRequest = tx.transaction as ethers.TransactionRequest;
-    const sentTx = await destinationSigner.sendTransaction(txRequest);
+    const sentTx = await destinationWallet.sendTransaction(txRequest);
     await sentTx.wait();
     destTxids.push(sentTx.hash);
   }

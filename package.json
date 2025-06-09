@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "transfer:token": "npx tsx src/transfer.ts",
+    "attest:token": "npx tsx src/attestToken.ts",
+    "redeem:token": "npx tsx src/redeem.ts"
   },
   "repository": {
     "type": "git",
