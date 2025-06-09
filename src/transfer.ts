@@ -5,7 +5,12 @@ import {
   serialize,
 } from '@wormhole-foundation/sdk';
 import evm from '@wormhole-foundation/sdk/evm';
-import { getMoonbeamSigner, getMoonbeamWallet, getSepoliaSigner, getSepoliaWallet } from './helpers';
+import {
+  getMoonbeamSigner,
+  getMoonbeamWallet,
+  getSepoliaSigner,
+  getSepoliaWallet,
+} from './helpers';
 import { ethers } from 'ethers';
 import { writeFile } from 'fs/promises';
 
@@ -16,23 +21,25 @@ async function transferTokens() {
   const sourceChainCtx = wh.getChain('Moonbeam');
   const destinationChainCtx = wh.getChain('Sepolia');
   /** Get signers, wallets, and addresses for source and destination chains
-  * Signers: Wormhole-compatible signers for SDK interactions
-  * Wallets: Raw ethers.Wallets for contract interactions
-  * Addresses: EVM addresses that won't trigger ENS resolve errors
-  * */ 
+   * Signers: Wormhole-compatible signers for SDK interactions
+   * Wallets: Raw ethers.Wallets for contract interactions
+   * Addresses: EVM addresses that won't trigger ENS resolve errors
+   * */
   const sourceSigner = await getMoonbeamSigner();
   const sourceWallet = await getMoonbeamWallet();
   const destinationSigner = await getSepoliaSigner();
   const destinationWallet = await getSepoliaWallet();
   const sourceAddress = await sourceSigner.address();
-  const destinationAddress = ethers.getAddress(await destinationSigner.address());
+  const destinationAddress = ethers.getAddress(
+    await destinationSigner.address(),
+  );
   if (typeof destinationAddress !== 'string') {
-  throw new Error('Destination address must be a string');
-}
-
+    throw new Error('Destination address must be a string');
+  }
 
   // Define the ERC-20 token and amount to transfer
-  const ERC20_ADDRESS = '0x39F2f26f247CcC223393396755bfde5ecaeb0648'; // Replace with actual ERC-20 token address
+  // Replace with contract address of the ERC-20 token to transfer
+  const ERC20_ADDRESS = 'INSERT_TOKEN_ADDRESS';
   const tokenAddress = toNative('Moonbeam', ERC20_ADDRESS);
   const amount = '0.01';
   // Get the Token Bridge protocol for source chain
@@ -52,7 +59,7 @@ async function transferTokens() {
   const decimals = await tokenContract.decimals();
   // Convert the amount to BigInt for comparison
   const amountBigInt = BigInt(ethers.parseUnits(amount, decimals).toString());
-  const humanBalance = ethers.formatUnits(tokenBalance, 18);
+  const humanBalance = ethers.formatUnits(tokenBalance, decimals);
   console.log(`💰 ERC-20 balance: ${humanBalance}`);
 
   if (tokenBalance < amountBigInt) {
@@ -81,8 +88,8 @@ async function transferTokens() {
     );
   }
 
-  // Replace with the token bridge address for your source chain
-  const tokenBridgeAddress = '0xbc976D4b9D57E57c3cA52e1Fd136C45FF7955A96'; // e.g., "0xYourTokenBridgeAddress"
+  // Replace with the token bridge contract address for your source chain
+  const tokenBridgeAddress = 'INSERT_TOKEN_BRIDGE_ADDRESS';
   // Approve the Token Bridge to spend your ERC-20 token
   const approveTx = await tokenContract.approve(
     tokenBridgeAddress,
@@ -96,10 +103,7 @@ async function transferTokens() {
     toNative(sourceChainCtx.chain, sourceAddress),
     {
       chain: destinationChainCtx.chain,
-      address: toUniversal(
-        destinationChainCtx.chain,
-        destinationAddress
-      ),
+      address: toUniversal(destinationChainCtx.chain, destinationAddress),
     },
     tokenAddress,
     amountBigInt,

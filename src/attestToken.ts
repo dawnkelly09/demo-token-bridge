@@ -1,7 +1,12 @@
 import { wormhole, toNative } from '@wormhole-foundation/sdk';
 import evm from '@wormhole-foundation/sdk/evm';
 import { ethers } from 'ethers';
-import { getMoonbeamSigner, getMoonbeamWallet, getSepoliaSigner, getSepoliaWallet } from './helpers';
+import {
+  getMoonbeamSigner,
+  getMoonbeamWallet,
+  getSepoliaSigner,
+  getSepoliaWallet,
+} from './helpers';
 
 async function attestToken() {
   // Initialize the Wormhole SDK, get chain contexts
@@ -12,11 +17,11 @@ async function attestToken() {
   const sourceSigner = await getMoonbeamSigner();
   const sourceWallet = getMoonbeamWallet();
   const destinationSigner = await getSepoliaSigner();
-  const destinationWallet = getSepoliaWallet();
+  const destinationWallet = await getSepoliaWallet();
 
   // Define the token to attest for registeration
   // on the destination chain (token you want to transfer)
-  const tokenToAttest = '0x39F2f26f247CcC223393396755bfde5ecaeb0648';
+  const tokenToAttest = 'INSERT_TOKEN_ADDRESS';
   const token = toNative(sourceChainCtx.chain, tokenToAttest);
   console.log(`🔍 Token to attest: ${token.toString()}`);
 
@@ -28,11 +33,11 @@ async function attestToken() {
   const sourceTxids: string[] = [];
   // Iterate through the unsigned transactions, sign and send them
   for await (const tx of createAttestationTxs) {
-  const txRequest = tx.transaction as ethers.TransactionRequest;
-  const sentTx = await sourceWallet.sendTransaction(txRequest); // Use wallet, not SDK signer
-  await sentTx.wait();
-  sourceTxids.push(sentTx.hash);
-}
+    const txRequest = tx.transaction as ethers.TransactionRequest;
+    const sentTx = await sourceWallet.sendTransaction(txRequest); // Use wallet, not SDK signer
+    await sentTx.wait();
+    sourceTxids.push(sentTx.hash);
+  }
   // Log the transaction ID of the attestation
   const sourceTxId = sourceTxids[0];
   console.log(`✅ Attestation tx sent: ${sourceTxId}`);
